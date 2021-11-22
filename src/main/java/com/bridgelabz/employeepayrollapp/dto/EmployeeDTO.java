@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class EmployeeDTO {
-    private String name;
-    private long salary;
+    public String name;
+    public long salary;
 }
