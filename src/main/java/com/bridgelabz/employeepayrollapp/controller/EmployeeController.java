@@ -4,11 +4,13 @@ import com.bridgelabz.employeepayrollapp.dto.EmployeeDTO;
 import com.bridgelabz.employeepayrollapp.dto.ResponseDTO;
 import com.bridgelabz.employeepayrollapp.model.Employee;
 import com.bridgelabz.employeepayrollapp.service.IEmployeeService;
+import com.bridgelabz.employeepayrollapp.util.UToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -18,44 +20,44 @@ public class EmployeeController {
     @Autowired
     private IEmployeeService employeeService;
 
+    @Autowired
+    private UToken uToken;
+
     @GetMapping(value = {"", "/", "/greet"})
     public String greeting() {
         return "Welcome To Employee Payroll Application.";
     }
 
-    @GetMapping("/employees")
-    public ResponseEntity<ResponseDTO> fetchAllEmployeesData() {
+    @GetMapping("/employees/all")
+    public List<Employee> fetchAllEmployeesData() {
         List<Employee> employeesDataList = employeeService.fetchAllEmployeesData();
-        ResponseDTO responseDTO = new ResponseDTO("Get List Of Employees Payroll Data Successful", employeesDataList);
-        return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.OK);
+        return employeesDataList;
     }
 
-    @GetMapping("/employees/{id}")
-    public ResponseEntity<ResponseDTO> fetchEmployeesDataById(@PathVariable long id) {
-        Employee employeesData = employeeService.fetchEmployeesDataById(id);
+    @GetMapping("/employees")
+    public ResponseEntity<ResponseDTO> fetchEmployeesDataById(@RequestHeader String token) {
+        Employee employeesData = employeeService.fetchEmployeesDataById(token);
         ResponseDTO responseDTO = new ResponseDTO("Get Employee Payroll Data For ID Successful", employeesData);
         return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.OK);
     }
 
     @PostMapping("/employees")
-    public ResponseEntity<ResponseDTO> addEmployeeData(@RequestBody EmployeeDTO employeeDTO) {
+    public ResponseEntity<ResponseDTO> addEmployeeData(@Valid @RequestBody EmployeeDTO employeeDTO) {
         Employee employeeData = employeeService.addEmployeeData(employeeDTO);
-        ResponseDTO responseDTO = new ResponseDTO("Created Employee Payroll Data Successful", employeeData);
+        ResponseDTO responseDTO = new ResponseDTO("Added Employee Payroll Data Successful", employeeData, uToken.createToken(employeeData.getId()));
         return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.OK);
     }
 
-    @PutMapping("/employees/{id}")
-    public ResponseEntity<ResponseDTO> updateEmployeeDataById(@RequestBody EmployeeDTO employeeDTO, @PathVariable long id) {
-        Employee employeeData = employeeService.updateEmployeeData(id, employeeDTO);
-        ResponseDTO responseDTO = new ResponseDTO("Updated Employee Payroll Data Successful", employeeData);
+    @PutMapping("/employees")
+    public ResponseEntity<ResponseDTO> updateEmployeeDataById(@RequestHeader String token, @Valid @RequestBody EmployeeDTO employeeDTO) {
+        Employee employeeData = employeeService.updateEmployeeData(token, employeeDTO);
+        ResponseDTO responseDTO = new ResponseDTO("Updated Employee Payroll Data Successful", employeeData, token);
         return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.OK);
     }
 
-    @DeleteMapping("/employees/{id}")
-    public ResponseEntity<ResponseDTO> deleteEmployeeDataById(@PathVariable long id) {
-        employeeService.deleteEmployeeDataById(id);
-        ResponseDTO responseDTO = new ResponseDTO("Deleted Employee Payroll Data Successful",
-                "Deleted Id: " + id);
-        return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.OK);
+    @DeleteMapping("/employees")
+    public ResponseEntity<String> deleteEmployeeDataById(@RequestHeader String token) {
+        employeeService.deleteEmployeeDataById(token);
+        return new ResponseEntity<String>("Deleted Employee Payroll Data Successful Deleted Id: " + uToken.decodeToken(token), HttpStatus.OK);
     }
 }

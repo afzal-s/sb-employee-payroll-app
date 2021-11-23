@@ -1,51 +1,54 @@
 package com.bridgelabz.employeepayrollapp.service.serviceimpl;
 
 import com.bridgelabz.employeepayrollapp.dto.EmployeeDTO;
+import com.bridgelabz.employeepayrollapp.exception.EmployeePayrollException;
 import com.bridgelabz.employeepayrollapp.model.Employee;
+import com.bridgelabz.employeepayrollapp.repository.IEmployeeRepository;
 import com.bridgelabz.employeepayrollapp.service.IEmployeeService;
+import com.bridgelabz.employeepayrollapp.util.UToken;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class EmployeeServiceImpl implements IEmployeeService {
 
-    private List<Employee> employeeDataList = new ArrayList<>();
+    @Autowired
+    IEmployeeRepository employeeRepository;
+
+    @Autowired
+    UToken uToken;
 
     @Override
     public List<Employee> fetchAllEmployeesData() {
-        return employeeDataList;
+        return employeeRepository.findAll();
     }
 
     @Override
-    public Employee fetchEmployeesDataById(long id) {
-        return employeeDataList.stream().filter(employee ->
-                employee.getId() == id).findFirst().get();
+    public Employee fetchEmployeesDataById(String token) {
+        return employeeRepository.findById(uToken.decodeToken(token))
+                .orElseThrow(() -> new EmployeePayrollException("Employee With employeeId: " + uToken.decodeToken(token) + " does not exists"));
     }
 
     @Override
-    public Employee addEmployeeData(EmployeeDTO employeeDTO) {
-        Employee employeeData = new Employee(employeeDataList.size() + 1, employeeDTO);
-        employeeDataList.add(employeeData);
-        return employeeData;
+    public Employee addEmployeeData(@RequestBody EmployeeDTO employeeDTO) {
+        Employee employeeData = new Employee(employeeDTO);
+        return employeeRepository.save(employeeData);
     }
 
     @Override
-    public Employee updateEmployeeData(long id, EmployeeDTO employeeDTO) {
-        Employee employeeData = this.fetchEmployeesDataById(id);
-
-        if (employeeData != null) {
-            employeeData.setName(employeeDTO.getName());
-            employeeData.setSalary(employeeDTO.getSalary());
-            employeeDataList.set((int) (id - 1), employeeData);
-        }
-        return employeeData;
-
+    public Employee updateEmployeeData(@RequestHeader String token, @RequestBody EmployeeDTO employeeDTO) {
+        Employee employeeData = this.fetchEmployeesDataById(token);
+        employeeData.updateEmployeeData(employeeDTO);
+        return employeeRepository.save(employeeData);
     }
 
     @Override
-    public void deleteEmployeeDataById(long id) {
-        employeeDataList.removeIf(employee -> employee.getId() == id);
+    public void deleteEmployeeDataById(String token) {
+        Employee employeeData = this.fetchEmployeesDataById(token);
+        employeeRepository.delete(employeeData);
     }
 }
